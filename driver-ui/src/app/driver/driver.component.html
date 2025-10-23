@@ -1,0 +1,235 @@
+<div class="driver-app">
+  <header class="header">
+    <div class="header-content">
+      <h1>🚗 {{ driverName }}</h1>
+      <div class="header-status">
+        <span class="status-badge" [ngClass]="statusClass">
+          {{ driverState.status | uppercase }}
+        </span>
+        <span class="connection-badge" [ngClass]="connectionClass">
+          {{ connectionStatus }}
+        </span>
+      </div>
+    </div>
+    <div class="driver-info">
+      <small>Driver ID: {{ driverId }}</small>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Connection Status Alert -->
+    <div *ngIf="!isConnected" class="alert alert-warning">
+      <strong>⚠️ Not Connected</strong>
+      <p>Attempting to connect to the server...</p>
+    </div>
+
+    <!-- Status Update Feedback -->
+    <div *ngIf="statusUpdateFeedback" 
+         class="alert alert-inline" 
+         [ngClass]="statusUpdateFeedback.type === 'success' ? 'alert-success' : 'alert-error'">
+      <strong>{{ statusUpdateFeedback.type === 'success' ? '✓' : '✗' }}</strong>
+      <span>{{ statusUpdateFeedback.message }}</span>
+    </div>
+
+    <!-- Status Control Section -->
+    <section class="card">
+      <h2>🔄 Driver Status</h2>
+      
+      <div class="status-controls">
+        <button 
+          (click)="onStatusChange('available')"
+          [disabled]="!isConnected || isUpdatingStatus || driverState.status === 'available'"
+          [class.active]="driverState.status === 'available'"
+          class="btn-status btn-status-available"
+        >
+          <span class="status-icon">✓</span>
+          <span class="status-label">Available</span>
+        </button>
+        
+        <button 
+          (click)="onStatusChange('offline')"
+          [disabled]="!isConnected || isUpdatingStatus || driverState.status === 'offline' || isBusy"
+          [class.active]="driverState.status === 'offline'"
+          class="btn-status btn-status-offline"
+        >
+          <span class="status-icon">⏸</span>
+          <span class="status-label">Offline</span>
+        </button>
+      </div>
+      
+      <p class="status-help-text">
+        <small>
+          <strong>Available:</strong> You will receive ride requests<br>
+          <strong>Offline:</strong> You will not receive ride requests<br>
+          <em>Note: Status automatically changes to "Busy" when you accept a ride</em>
+        </small>
+      </p>
+    </section>
+
+    <!-- Location Section -->
+    <section class="card">
+      <h2>📍 Current Location</h2>
+      
+      <div class="location-display">
+        <div class="coordinate-box">
+          <label>Latitude:</label>
+          <span>{{ currentLat.toFixed(6) }}</span>
+        </div>
+        <div class="coordinate-box">
+          <label>Longitude:</label>
+          <span>{{ currentLon.toFixed(6) }}</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="lat">Latitude</label>
+        <input 
+          id="lat"
+          type="number" 
+          [(ngModel)]="currentLat" 
+          step="0.000001"
+          [disabled]="!isConnected"
+          class="form-control"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="lon">Longitude</label>
+        <input 
+          id="lon"
+          type="number" 
+          [(ngModel)]="currentLon" 
+          step="0.000001"
+          [disabled]="!isConnected"
+          class="form-control"
+        />
+      </div>
+
+      <button 
+        (click)="onUpdateLocation()" 
+        [disabled]="!isConnected"
+        class="btn btn-primary btn-block"
+      >
+        Update Location
+      </button>
+
+      <div class="location-presets">
+        <h3>Quick Locations</h3>
+        <div class="preset-buttons">
+          <button 
+            *ngFor="let preset of locationPresets"
+            (click)="onSetLocation(preset)"
+            [disabled]="!isConnected"
+            [class.btn-active]="isCurrentLocation(preset)"
+            class="btn btn-secondary btn-small"
+          >
+            {{ preset.name }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ride Request Section -->
+    <section *ngIf="hasRideRequest && isAvailable" class="card card-highlight">
+      <h2>🔔 New Ride Request!</h2>
+      
+      <div class="ride-details">
+        <div class="detail-row">
+          <strong>Ride ID:</strong>
+          <span>{{ currentRideRequest?.ride_id }}</span>
+        </div>
+        
+        <div class="detail-row">
+          <strong>Pickup:</strong>
+          <span>{{ formatLocation(currentRideRequest!.departure.lat, currentRideRequest!.departure.lon) }}</span>
+        </div>
+        
+        <div class="detail-row">
+          <strong>Drop-off:</strong>
+          <span>{{ formatLocation(currentRideRequest!.destination.lat, currentRideRequest!.destination.lon) }}</span>
+        </div>
+
+        <div class="detail-row" *ngIf="currentRideRequest?.distance">
+          <strong>Distance:</strong>
+          <span>{{ formatDistance(currentRideRequest?.distance) }}</span>
+        </div>
+
+        <div class="detail-row" *ngIf="currentRideRequest?.duration">
+          <strong>Duration:</strong>
+          <span>{{ formatDuration(currentRideRequest?.duration) }}</span>
+        </div>
+
+        <div class="detail-row" *ngIf="currentRideRequest?.fare">
+          <strong>Fare:</strong>
+          <span>{{ formatFare(currentRideRequest?.fare) }}</span>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button 
+          (click)="onAcceptRide()" 
+          class="btn btn-success btn-large"
+        >
+          ✓ Accept Ride
+        </button>
+        <button 
+          (click)="onRejectRide()" 
+          class="btn btn-danger btn-large"
+        >
+          ✗ Reject Ride
+        </button>
+      </div>
+    </section>
+
+    <!-- Current Ride Section -->
+    <section *ngIf="isBusy && driverState.currentRide" class="card card-active">
+      <h2>🚕 {{ isHeadingToPickup ? 'Heading to Pickup' : 'Ride in Progress' }}</h2>
+      
+      <div class="ride-details">
+        <div class="detail-row">
+          <strong>Ride ID:</strong>
+          <span>{{ driverState.currentRide.ride_id }}</span>
+        </div>
+        
+        <div class="detail-row">
+          <strong>Pickup:</strong>
+          <span>{{ formatLocation(driverState.currentRide.departure.lat, driverState.currentRide.departure.lon) }}</span>
+        </div>
+        
+        <div class="detail-row">
+          <strong>Drop-off:</strong>
+          <span>{{ formatLocation(driverState.currentRide.destination.lat, driverState.currentRide.destination.lon) }}</span>
+        </div>
+      </div>
+
+      <!-- Show "Start Ride" button when heading to pickup -->
+      <button 
+        *ngIf="isHeadingToPickup"
+        (click)="onStartRide()" 
+        class="btn btn-success btn-large btn-block"
+      >
+        🚀 Start Ride (Passenger Picked Up)
+      </button>
+
+      <!-- Show "End Ride" button when passenger is on board -->
+      <button 
+        *ngIf="isPassengerOnBoard"
+        (click)="onEndRide()" 
+        class="btn btn-warning btn-large btn-block"
+      >
+        🏁 End Ride
+      </button>
+    </section>
+
+    <!-- Waiting for Rides -->
+    <section *ngIf="isAvailable && !hasRideRequest" class="card card-waiting">
+      <h2>✨ Available for Rides</h2>
+      <p class="waiting-message">Waiting for ride requests...</p>
+      <div class="spinner"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Driver Application v1.0 | Use /driver/1, /driver/2, etc. for different drivers</p>
+  </footer>
+</div>

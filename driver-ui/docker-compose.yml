@@ -1,0 +1,14 @@
+services:
+  driver-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: driver-ui
+    ports:
+      - "4202:4202"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development

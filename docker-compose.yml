@@ -1,0 +1,56 @@
+version: '3.8'
+
+# This compose file orchestrates all services by including the individual docker-compose files
+# from each component directory.
+
+services:
+  # Backend services (postgres, redis, websocket, worker)
+  postgres:
+    extends:
+      file: ./backend/docker-compose.yml
+      service: postgres
+
+  redis:
+    extends:
+      file: ./backend/docker-compose.yml
+      service: redis
+
+  websocket:
+    extends:
+      file: ./backend/docker-compose.yml
+      service: websocket
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  command-queue-worker:
+    extends:
+      file: ./backend/docker-compose.yml
+      service: command-queue-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Frontend services
+  passenger-ui:
+    extends:
+      file: ./passenger-ui/docker-compose.yml
+      service: passenger-ui
+    depends_on:
+      - websocket
+
+  driver-ui:
+    extends:
+      file: ./driver-ui/docker-compose.yml
+      service: driver-ui
+    depends_on:
+      - websocket
+
+volumes:
+  postgres-data:
+    driver: local
+

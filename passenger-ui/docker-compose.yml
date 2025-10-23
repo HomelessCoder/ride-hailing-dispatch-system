@@ -1,0 +1,14 @@
+services:
+  passenger-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: passenger-ui
+    ports:
+      - "4201:4201"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development

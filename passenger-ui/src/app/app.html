@@ -1,0 +1,188 @@
+<div class="container">
+  <header>
+    <h1>🚗 Ride Booking</h1>
+    <p class="subtitle">Book your ride in seconds</p>
+    
+    <!-- User Authorization Section -->
+    <div class="auth-section">
+      <div class="auth-label">Logged in as: <strong>{{ currentUserName }}</strong></div>
+      <div class="auth-buttons">
+        <button 
+          class="btn-auth" 
+          [class.active]="isAlice"
+          (click)="switchToAlice()"
+          [disabled]="isAlice"
+        >
+          👤 Alice
+        </button>
+        <button 
+          class="btn-auth" 
+          [class.active]="isBob"
+          (click)="switchToBob()"
+          [disabled]="isBob"
+        >
+          👤 Bob
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Location Input Section -->
+    <section class="location-section" *ngIf="!isRideActive && !isCompleted">
+      <div class="card">
+        <h2>Enter Your Journey</h2>
+        
+        <div class="form-group">
+          <label>📍 Departure Location</label>
+          <div class="location-inputs">
+            <input 
+              type="number" 
+              [(ngModel)]="departureLat" 
+              placeholder="Latitude"
+              step="0.0001"
+              [disabled]="isLoading"
+            />
+            <input 
+              type="number" 
+              [(ngModel)]="departureLon" 
+              placeholder="Longitude"
+              step="0.0001"
+              [disabled]="isLoading"
+            />
+          </div>
+          <small class="hint">Example: London Downtown (51.5074, -0.1278)</small>
+          <div class="quick-locations">
+            <button type="button" class="btn-quick" [class.active]="isDowntownSelected(true)" (click)="setLocationDowntown(true)" [disabled]="isLoading">Downtown</button>
+            <button type="button" class="btn-quick" [class.active]="isHeathrowSelected(true)" (click)="setLocationHeathrow(true)" [disabled]="isLoading">Heathrow</button>
+            <button type="button" class="btn-quick" [class.active]="isMidtownSelected(true)" (click)="setLocationMidtown(true)" [disabled]="isLoading">Midtown</button>
+            <button type="button" class="btn-quick" [class.active]="isUptownSelected(true)" (click)="setLocationUptown(true)" [disabled]="isLoading">Uptown</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>🎯 Destination Location</label>
+          <div class="location-inputs">
+            <input 
+              type="number" 
+              [(ngModel)]="destinationLat" 
+              placeholder="Latitude"
+              step="0.0001"
+              [disabled]="isLoading"
+            />
+            <input 
+              type="number" 
+              [(ngModel)]="destinationLon" 
+              placeholder="Longitude"
+              step="0.0001"
+              [disabled]="isLoading"
+            />
+          </div>
+          <small class="hint">Example: Heathrow Airport (51.4700, -0.4543)</small>
+          <div class="quick-locations">
+            <button type="button" class="btn-quick" [class.active]="isDowntownSelected(false)" (click)="setLocationDowntown(false)" [disabled]="isLoading">Downtown</button>
+            <button type="button" class="btn-quick" [class.active]="isHeathrowSelected(false)" (click)="setLocationHeathrow(false)" [disabled]="isLoading">Heathrow</button>
+            <button type="button" class="btn-quick" [class.active]="isMidtownSelected(false)" (click)="setLocationMidtown(false)" [disabled]="isLoading">Midtown</button>
+            <button type="button" class="btn-quick" [class.active]="isUptownSelected(false)" (click)="setLocationUptown(false)" [disabled]="isLoading">Uptown</button>
+          </div>
+        </div>
+
+        <button 
+          class="btn btn-primary"
+          (click)="onRequestQuote()"
+          [disabled]="!canRequestQuote || isLoading"
+        >
+          <span *ngIf="!isLoading">Get Quote</span>
+          <span *ngIf="isLoading">⏳ Loading...</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Quote Display Section -->
+    <section class="quote-section" *ngIf="showQuote && !isRideActive && !isCompleted">
+      <div class="card quote-card">
+        <h2>✨ Your Quote</h2>
+        
+        <div class="quote-details">
+          <div class="quote-item">
+            <span class="quote-label">Distance:</span>
+            <span class="quote-value">{{ currentQuote!.distance.toFixed(2) }} km</span>
+          </div>
+          <div class="quote-item">
+            <span class="quote-label">Duration:</span>
+            <span class="quote-value">{{ currentQuote!.duration.toFixed(0) }} min</span>
+          </div>
+          <div class="quote-item fare">
+            <span class="quote-label">Fare:</span>
+            <span class="quote-value price">
+              {{ currentQuote!.fare.amount.toFixed(2) }} {{ currentQuote!.fare.currency }}
+            </span>
+          </div>
+        </div>
+
+        <div class="quote-actions">
+          <button 
+            class="btn btn-success"
+            (click)="onRequestRide()"
+            [disabled]="!canRequestRide"
+          >
+            🚀 Book This Ride
+          </button>
+          <button 
+            class="btn btn-secondary"
+            (click)="onStartOver()"
+          >
+            ↩️ Start Over
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ride Status Section -->
+    <section class="status-section" *ngIf="isRideActive || isCompleted">
+      <div class="card status-card" [class.completed]="isCompleted">
+        <div class="status-icon">
+          <span *ngIf="currentStatus.status === 'finding_driver'">🔍</span>
+          <span *ngIf="currentStatus.status === 'driver_accepted'">🚕</span>
+          <span *ngIf="currentStatus.status === 'ride_in_progress'">🚗</span>
+          <span *ngIf="isCompleted">🎉</span>
+        </div>
+
+        <h2 class="status-title">{{ getStatusTitle() }}</h2>
+        <p class="status-message">{{ statusMessage }}</p>
+
+        <div class="status-progress" *ngIf="!isCompleted">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width]="getProgressWidth()"></div>
+          </div>
+        </div>
+
+        <button 
+          class="btn btn-primary"
+          (click)="onStartOver()"
+          *ngIf="isCompleted"
+        >
+          📱 Book Another Ride
+        </button>
+      </div>
+    </section>
+
+    <!-- Error Message -->
+    <div class="error-message" *ngIf="hasError">
+      <strong>⚠️ Error:</strong> {{ statusMessage }}
+      <button class="btn btn-small" (click)="onStartOver()">Try Again</button>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-overlay" *ngIf="isLoading">
+      <div class="spinner"></div>
+    </div>
+  </main>
+
+  <footer>
+    <p class="connection-status" [ngClass]="connectionStatusClass">
+      <span class="status-icon">{{ connectionStatusIcon }}</span>
+      {{ connectionStatusText }}
+    </p>
+  </footer>
+</div>

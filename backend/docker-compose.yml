@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgis/postgis:17-3.4
+    container_name: rhd-postgres
+    environment:
+      POSTGRES_DB: rhd
+      POSTGRES_USER: rhd
+      POSTGRES_PASSWORD: rhd
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/Infra/enable_postgis.sql:/docker-entrypoint-initdb.d/00-enable-postgis.sql
+      - ./src/CommandQueue/Infra/command_queue.sql:/docker-entrypoint-initdb.d/10-command-queue.sql
+      - ./src/User/Infra/users.sql:/docker-entrypoint-initdb.d/20-users.sql
+      - ./src/Driver/Infra/drivers.sql:/docker-entrypoint-initdb.d/30-drivers.sql
+      - ./src/Ride/Infra/rides.sql:/docker-entrypoint-initdb.d/40-rides.sql
+      - ./src/Infra/seed.sql:/docker-entrypoint-initdb.d/99-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rhd -d rhd"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: rhd-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  websocket:
+    build:
+      context: .
+      dockerfile: DockerfileDevcontainer
+    container_name: rhd-websocket
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/workspaces/backend
+    working_dir: /workspaces/backend
+    command: php bin/websocket-server
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  command-queue-worker:
+    build:
+      context: .
+      dockerfile: DockerfileDevcontainer
+    container_name: rhd-command-queue-worker
+    volumes:
+      - .:/workspaces/backend
+    working_dir: /workspaces/backend
+    command: php bin/console command-queue:run-worker
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    driver: local

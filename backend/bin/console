@@ -1,0 +1,25 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Modular\Console\PowerModule\Setup\ConsoleCommandsSetup;
+use Modular\Framework\App\ModularAppBuilder;
+use Symfony\Component\Console\Application;
+use App\CompositeCommandHandlerSetup;
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
+
+$modules = require __DIR__ . '/../src/bootstrap.php';
+
+$app = (new ModularAppBuilder(__DIR__ . '/../'))
+    ->withModules(...$modules)
+    ->withPowerSetup(new ConsoleCommandsSetup(), new CompositeCommandHandlerSetup())
+    ->build()
+;
+
+$console = $app->get(Application::class);
+$console->run();

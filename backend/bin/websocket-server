@@ -1,0 +1,63 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use App\CommandQueue\CompositeCommandHandler;
+use App\Shared\ICommandHandler;
+use App\WebSocket\MessageHandler;
+use App\WebSocket\RedisSubscriber;
+use App\WebSocket\WebSocketHandler;
+use Modular\Framework\App\ModularAppBuilder;
+use Ratchet\Http\HttpServer;
+use Ratchet\Server\IoServer;
+use Ratchet\WebSocket\WsServer;
+use App\CompositeCommandHandlerSetup;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
+
+// Populate $_ENV from loaded environment variables
+$_ENV = array_merge($_ENV, $_SERVER);
+
+try {
+    $modules = require __DIR__ . '/../src/bootstrap.php';
+
+    $app = (new ModularAppBuilder(__DIR__ . '/../'))
+        ->withModules(...$modules)
+        ->withPowerSetup(new CompositeCommandHandlerSetup())
+        ->build()
+    ;
+
+    $webSocketHandler = $app->get(WebSocketHandler::class);
+    $messageHandler = $app->get(MessageHandler::class);
+    $webSocketHandler->setMessageHandler($messageHandler);
+
+    $server = IoServer::factory(
+        new HttpServer(
+            new WsServer($webSocketHandler),
+        ),
+        8080,
+        '0.0.0.0',
+    );
+
+    // Subscribe to Redis Pub/Sub using React's async socket
+    $redisSubscriber = new RedisSubscriber(
+        $_ENV['REDIS_HOST'],
+        (int)$_ENV['REDIS_PORT'],
+        $webSocketHandler,
+        $server->loop
+    );
+    $redisSubscriber->connect();
+
+    echo "WebSocket server started on port 8080\n";
+    echo "Redis subscriber integrated (listening to user.*, driver.*)\n";
+
+    $server->run();
+} catch (\Throwable $e) {
+    echo "FATAL ERROR: " . $e->getMessage() . "\n";
+    echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
+    exit(1);
+}

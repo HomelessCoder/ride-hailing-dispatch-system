@@ -1,0 +1,65 @@
+{
+    "name": "Angular v20 Development",
+    "image": "mcr.microsoft.com/devcontainers/typescript-node:20-bullseye",
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "angular.ng-template",
+                "ms-vscode.vscode-typescript-next",
+                "bradlc.vscode-tailwindcss",
+                "esbenp.prettier-vscode",
+                "ms-vscode.vscode-eslint",
+                "formulahendry.auto-rename-tag",
+                "christian-kohler.path-intellisense",
+                "ms-vscode.vscode-json",
+                "rangav.vscode-thunder-client",
+                "ms-playwright.playwright",
+                "ms-vscode.test-adapter-converter",
+                "firsttris.vscode-jest-runner",
+                "humao.rest-client",
+                "streetsidesoftware.code-spell-checker"
+            ],
+            "settings": {
+                "typescript.preferences.renameShorthandProperties": false,
+                "typescript.suggest.autoImports": true,
+                "typescript.updateImportsOnFileMove.enabled": "always",
+                "editor.formatOnSave": true,
+                "editor.codeActionsOnSave": {
+                    "source.organizeImports": "explicit",
+                    "source.fixAll.eslint": "explicit"
+                },
+                "emmet.includeLanguages": {
+                    "typescript": "html"
+                },
+                "files.associations": {
+                    "*.html": "html"
+                }
+            }
+        }
+    },
+    "onCreateCommand": "npm install -g @angular/cli@20",
+    "postCreateCommand": "echo 'Angular CLI installed. Run: ng new my-app --routing --style=scss --ssr=false to create a new Angular project'",
+    "forwardPorts": [
+        4200,
+        9876
+    ],
+    "portsAttributes": {
+        "4200": {
+            "label": "Angular Dev Server",
+            "onAutoForward": "notify"
+        },
+        "9876": {
+            "label": "Karma Test Server",
+            "onAutoForward": "silent"
+        }
+    },
+    "remoteUser": "node",
+    "mounts": [
+        "source=${localWorkspaceFolder}/.devcontainer/.npmrc,target=/home/node/.npmrc,type=bind,consistency=cached"
+    ]
+}

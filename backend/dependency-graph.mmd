@@ -1,0 +1,87 @@
+---
+config:
+  class:
+    hideEmptyMembersBox: true
+---
+classDiagram
+direction TB
+    class ConfigModule {
+        + Loader
+    }
+    class RendererModule {
+        + RendererPluginRegistry
+    }
+    class MermaidRendererModule {
+    }
+    class InfraModule {
+        + repository_pdo_connection
+        + EventPublisher
+        + Client
+    }
+    class CommandQueueModule {
+        + CommandQueueRepository
+        + CompositeCommandHandler
+        + RunWorkerCommand
+    }
+    class UserModule {
+        + UserRepository
+    }
+    class DriverModule {
+        + DriverService
+        + ClosestDriverFinder
+        + UpdateDriverLocationCommandHandler
+        + UpdateDriverStatusCommandHandler
+    }
+    class RideModule {
+        + RideService
+        + QuoteService
+        + RequestRideCommandHandler
+        + FindDriverCommandHandler
+        + CheckDriverResponseTimeoutCommandHandler
+        + AcceptRideCommandHandler
+        + RejectRideCommandHandler
+        + StartRideCommandHandler
+        + CompleteRideCommandHandler
+        + RequestRideConsoleCommand
+    }
+    class WebSocketModule {
+        + WebSocketHandler
+        + MessageHandler
+    }
+
+    <<independent>> ConfigModule
+    <<independent>> RendererModule
+    <<independent>> MermaidRendererModule
+    <<independent>> InfraModule
+    <<independent>> CommandQueueModule
+    <<unused>> ConfigModule
+    <<unused>> RendererModule
+    <<unused>> MermaidRendererModule
+    <<unused>> UserModule
+    <<unused>> WebSocketModule
+
+    UserModule ..> InfraModule : repository_pdo_connection
+    DriverModule ..> InfraModule : repository_pdo_connection
+    RideModule ..> InfraModule : repository_pdo_connection
+    RideModule ..> InfraModule : EventPublisher
+    RideModule ..> InfraModule : Client
+    RideModule ..> CommandQueueModule : CommandQueueRepository
+    RideModule ..> DriverModule : ClosestDriverFinder
+    RideModule ..> DriverModule : DriverService
+    WebSocketModule ..> CommandQueueModule : CommandQueueRepository
+    WebSocketModule ..> RideModule : QuoteService
+    WebSocketModule ..> DriverModule : DriverService
+
+    class ConfigModule:::independent
+    class RendererModule:::independent
+    class MermaidRendererModule:::independent
+    class InfraModule:::independent
+    class CommandQueueModule:::independent
+    class ConfigModule:::unused
+    class RendererModule:::unused
+    class MermaidRendererModule:::unused
+    class UserModule:::unused
+    class WebSocketModule:::unused
+
+    classDef independent fill:#e1f5fe, stroke:#0277bd, stroke-width:2px;
+    classDef unused fill:#fff3e0, stroke:#f57c00, stroke-width:2px, stroke-dasharray: 2;
