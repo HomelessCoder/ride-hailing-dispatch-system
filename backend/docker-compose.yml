@@ -46,7 +46,7 @@ services:
     volumes:
       - .:/workspaces/backend
     working_dir: /workspaces/backend
-    command: php bin/websocket-server
+    command: sh -c "composer install --no-dev && php bin/websocket-server"
     depends_on:
       - postgres
       - redis
@@ -60,7 +60,7 @@ services:
     volumes:
       - .:/workspaces/backend
     working_dir: /workspaces/backend
-    command: php bin/console command-queue:run-worker
+    command: sh -c "composer install --no-dev && php bin/console command-queue:run-worker"
     depends_on:
       - postgres
       - redis

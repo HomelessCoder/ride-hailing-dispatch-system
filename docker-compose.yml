@@ -1,5 +1,3 @@
-version: '3.8'
-
 # This compose file orchestrates all services by including the individual docker-compose files
 # from each component directory.
 
